@@ -4,13 +4,14 @@ import { api } from './api'
 import Configuration from './Configuration'
 import FileBrowser from './FileBrowser'
 import Monitor from './Monitor'
+import SamplePreview from './SamplePreview'
 import Tools from './Tools'
 import { ConfigPreview, EnvironmentPage, History, RootPath } from './Pages'
 import { activeStatuses, type Environment, type Job, type JobKind, type Project, type TrainSettings } from './types'
 
 interface Draft { name: string; config: TrainSettings }
 interface Bootstrap { projects: Project[]; jobs: Job[]; environment: Environment; bindings: Record<string, string[]> }
-type Page = 'workspace' | 'history' | 'environment' | 'tools'
+type Page = 'workspace' | 'history' | 'environment' | 'tools' | 'samples'
 type PathKey = 'dataset_path' | 'reg_dataset_path' | 'transformer_path' | 'text_encoder_path' | 'vae_path'
 
 function restoreDraft(project: Project): Draft {
@@ -264,7 +265,7 @@ export default function App() {
 
   return <div className="app-shell">
     <header className="app-nav"><a className="app-brand" href="#" onClick={event => { event.preventDefault(); setPage('workspace') }}>KohakuMoss Studio</a>
-      <nav aria-label="主导航">{([['workspace', '训练工作台'], ['tools', '原生工具'], ['history', '运行记录'], ['environment', '模型与环境']] as const).map(([value, label]) =>
+      <nav aria-label="主导航">{([['workspace', '训练工作台'], ['samples', '采样预览'], ['tools', '原生工具'], ['history', '运行记录'], ['environment', '模型与环境']] as const).map(([value, label]) =>
         <button key={value} aria-current={page === value ? 'page' : undefined} onClick={() => setPage(value)}>{label}</button>)}</nav>
       <button className="theme-toggle" type="button" aria-label={theme === 'dark' ? '切换为浅色主题' : '切换为暗色主题'}
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}<span>{theme === 'dark' ? '浅色' : '暗色'}</span></button>
@@ -298,8 +299,8 @@ export default function App() {
                 if (target) { selectProject(target); setSelectedJobId(gpuTask.id) }
               }}>查看任务</button></p>}
             </footer>
-          </div><Monitor job={currentJob} environment={environment} onStop={stop} onMessage={notify} onResume={resumeFrom} /></div>
-        </main> : page === 'tools' ? <Tools value={draft.config} environment={environment} job={currentJob} projectId={project.id} busy={!!busy} onChange={config => setDraft({ ...draft, config })} onRun={start} onSave={() => { void save() }} onStop={stop} onMessage={notify} />
+          </div><Monitor job={currentJob} environment={environment} onStop={stop} onMessage={notify} onResume={resumeFrom} onPreview={() => setPage('samples')} /></div>
+        </main> : page === 'samples' ? <SamplePreview job={currentJob} jobs={projectJobs} onSelectJob={job => setSelectedJobId(job.id)} onBack={() => setPage('workspace')} /> : page === 'tools' ? <Tools value={draft.config} environment={environment} job={currentJob} projectId={project.id} busy={!!busy} onChange={config => setDraft({ ...draft, config })} onRun={start} onSave={() => { void save() }} onStop={stop} onMessage={notify} />
           : page === 'history' ? <main className="page-main"><History jobs={jobs} onRetry={retry} onCancel={stop} onSelect={job => { const target = projects.find(item => item.id === job.project_id); if (target) { selectProject(target); setSelectedJobId(job.id); if (job.origin !== 'external' && !['train', 'cache', 'check', 'doctor'].includes(job.kind)) setPage('tools') } }} /></main>
           : <main className="page-main"><EnvironmentPage environment={environment} busy={!!busy} onCheck={() => start('doctor')} /></main>}
       </div>}

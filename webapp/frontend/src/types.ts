@@ -96,7 +96,26 @@ export interface Job {
   finished_at: number | null
 }
 
-export interface Artifact { name: string; path: string; size?: number; modified: number }
+export interface Artifact { name: string; path: string; size?: number; modified: number; job_id?: string; step?: number | null; inherited?: boolean; source_started_at?: number }
+export interface SamplePoint {
+  id: string
+  step: number
+  epoch: number | null
+  job_id: string
+  source_started_at: number
+  inherited: boolean
+  modified: number
+  images: Artifact[]
+  settings: { prompts?: string[]; seeds?: number[]; steps?: number; cfg?: number; sizes?: number[] }
+}
+export interface GalleryPage {
+  points: SamplePoint[]
+  history: SamplePoint[] | null
+  history_revision: string
+  total: number
+  next_offset: number | null
+  runs: { id: string; started_at: number | null; cutoff: number | null }[]
+}
 export interface JobDetail {
   job: Job
   metrics: Record<string, number>[]

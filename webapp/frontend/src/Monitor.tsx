@@ -10,9 +10,10 @@ interface Props {
   onStop: (job: Job) => void
   onMessage: (message: string, error?: boolean) => void
   onResume?: (path: string, fresh: boolean) => void
+  onPreview?: () => void
 }
 
-export default function Monitor({ job, environment, onStop, onMessage, onResume }: Props) {
+export default function Monitor({ job, environment, onStop, onMessage, onResume, onPreview }: Props) {
   const { detail, log, error } = useTask(job?.id)
   const [follow, setFollow] = useState(true)
   const logArea = useRef<HTMLPreElement>(null)
@@ -42,9 +43,9 @@ export default function Monitor({ job, environment, onStop, onMessage, onResume 
     catch (reason) { onMessage(reason instanceof Error ? reason.message : '目录打开失败', true) }
   }
 
-  const artifactUrl = (path: string) => `/api/jobs/${current?.id}/artifacts/${path.split('/').map(encodeURIComponent).join('/')}`
+  const artifactUrl = (path: string, jobId?: string) => `/api/jobs/${jobId || current?.id}/artifacts/${path.split('/').map(encodeURIComponent).join('/')}`
   return <aside className="monitor" aria-label="运行监视">
-    <header className="monitor-heading"><h2>运行监视</h2><span className={`ready-indicator ${environment.ready ? '' : 'unready'}`}>
+    <header className="monitor-heading"><h2>运行监视</h2>{onPreview && current?.kind === 'train' && <button className="text-button" onClick={onPreview}>采样预览</button>}<span className={`ready-indicator ${environment.ready ? '' : 'unready'}`}>
       <i />{environment.ready ? '环境就绪' : '待检查'}</span></header>
     <div className="gpu-summary"><span>{environment.gpu?.name.replace('NVIDIA GeForce ', '') || 'GPU 未识别'}</span>
       <span>{environment.gpu ? `${(environment.gpu.used_mib / 1024).toFixed(1)} / ${(environment.gpu.total_mib / 1024).toFixed(1)} GB` : '—'}</span></div>
@@ -76,14 +77,14 @@ export default function Monitor({ job, environment, onStop, onMessage, onResume 
     </section>
     <section className="checkpoint-section" id="checkpoints" tabIndex={-1}>
       <div className="section-heading"><h2>检查点</h2><button className="text-button" disabled={!current} onClick={openFolder}><FolderOpen size={14} />打开目录</button></div>
-      {checkpoints.length > 0 && onResume && <div className="resume-list">{checkpoints.map(checkpoint => <div key={checkpoint.path}><span>{checkpoint.name}</span><button type="button" className="text-button" onClick={() => onResume(checkpoint.path, false)}>设置续训</button><button type="button" className="text-button" onClick={() => onResume(checkpoint.path, true)}>加载权重另训</button></div>)}</div>}
+      {checkpoints.length > 0 && onResume && <div className="resume-list">{checkpoints.map(checkpoint => <div key={checkpoint.path}><span><strong>{checkpoint.step !== undefined ? `Step ${checkpoint.step}` : checkpoint.name}</strong><small>{checkpoint.inherited ? '续训来源' : '本次运行'} · {dateTime(checkpoint.source_started_at)}</small></span><button type="button" className="text-button" onClick={() => onResume(checkpoint.path, false)}>设置续训</button><button type="button" className="text-button" onClick={() => onResume(checkpoint.path, true)}>加载权重另训</button></div>)}</div>}
       {weightFiles.length ? <div className="artifact-list">{weightFiles.map(file =>
-        <a className="artifact-row" href={artifactUrl(file.path)} key={file.path} title={file.path}>
+        <a className="artifact-row" href={artifactUrl(file.path, file.job_id)} key={`${file.job_id}:${file.path}`} title={file.path}>
           <div><strong>{file.name}</strong><span>{file.path}</span></div><span>{bytes(file.size || 0)}</span><Download size={15} />
         </a>)}</div> : <div className="checkpoint-empty">训练保存的权重将在这里显示。</div>}
     </section>
-    {samples.length > 0 && <section className="sample-section"><h2>训练采样</h2><div className="sample-grid">{samples.map(sample =>
-      <a href={artifactUrl(sample.path)} key={sample.path} title={sample.path}><img src={artifactUrl(sample.path)} alt={sample.name} loading="lazy" /><span>{sample.name}</span></a>
+    {current?.kind === 'train' && onPreview ? <section className="sample-section"><div className="section-heading"><h2>训练采样</h2></div><button className="button secondary" onClick={onPreview}>按 EP / Step 查看采样图</button></section> : samples.length > 0 && <section className="sample-section"><div className="section-heading"><h2>训练采样</h2></div><div className="sample-grid">{samples.map(sample =>
+      <a href={artifactUrl(sample.path, sample.job_id)} key={`${sample.job_id}:${sample.path}`} title={sample.path}><img src={artifactUrl(sample.path, sample.job_id)} alt={sample.name} loading="lazy" /><span>{sample.step !== undefined && sample.step !== null ? `Step ${sample.step}` : sample.name}</span></a>
     )}</div></section>}
     {files.length > 0 && <section className="sample-section"><h2>报告与其他文件</h2><div className="artifact-list">{files.map(file => <a className="artifact-row" key={file.path} href={artifactUrl(file.path)}><div><strong>{file.name}</strong><span>{file.path}</span></div><Download size={15} /></a>)}</div></section>}
   </aside>

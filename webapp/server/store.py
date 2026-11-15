@@ -246,6 +246,16 @@ class Store:
                 (*values.values(), job_id),
             )
 
+    def training_jobs(self, project_id):
+        with self.connection() as db:
+            return [
+                self.unpack(row)
+                for row in db.execute(
+                    "SELECT * FROM jobs WHERE project_id=? AND kind='train' ORDER BY created_at DESC",
+                    (project_id,),
+                )
+            ]
+
     def upsert_external(self, job):
         with self.connection() as db:
             keys = list(job)

@@ -25,9 +25,9 @@ from .configuration import (
     TrainSettings,
     render_train,
 )
+from .gallery_api import router as gallery_router
 from .inspection import (
     artifact_path,
-    artifacts,
     browse,
     job_log_path,
     log_chunk,
@@ -38,6 +38,7 @@ from .jobs import cancel_job, dispatch, reconcile, start_job
 from .native import BINDINGS
 from .native_api import router as native_router
 from .store import BusyJob, store
+from .training_history import inherited_artifacts
 
 DIST = ROOT / "webapp" / "frontend" / "dist"
 GPU_CACHE = {"time": 0, "value": None}
@@ -68,6 +69,7 @@ async def lifespan(application):
 
 app = FastAPI(title="KohakuMoss Studio", version="0.1.0", lifespan=lifespan)
 app.include_router(native_router)
+app.include_router(gallery_router)
 app.add_middleware(
     TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"]
 )
@@ -281,7 +283,11 @@ def create_job(project_id: str, value: JobInput):
 def job_detail(job_id: str):
     reconcile()
     job = get_job(job_id)
-    return {"job": job, "metrics": metric_rows(job), "artifacts": artifacts(job)}
+    return {
+        "job": job,
+        "metrics": metric_rows(job),
+        "artifacts": inherited_artifacts(job, store),
+    }
 
 
 @app.post("/api/jobs/{job_id}/cancel")
