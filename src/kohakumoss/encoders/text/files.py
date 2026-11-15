@@ -1,8 +1,7 @@
-"""Text-encoder checkpoint tensors by the text model's own names, read as zero-copy
-views of the memory-mapped safetensors files (headers first, one tensor per `get`): a
-model dir's shards, a ComfyUI file or a pre-quantized file. See
-docs/internals/text-encoder.md#streamed-load."""
+"""Text-encoder checkpoint tensors by the text model's own names, with headers first
+and one tensor per `get`: model-dir shards, a ComfyUI file or a pre-quantized file."""
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -36,7 +35,12 @@ class TextFiles:
     def __init__(self, files: list[Path], name_of: Callable[[str], str | None]):
         self.where: dict[str, tuple] = {}
         for f in files:
-            handle = safe_open(str(f), framework="pt", device="cpu")
+            handle = safe_open(
+                str(f),
+                framework="pt",
+                device="cpu",
+                backend="pread" if sys.platform == "win32" else "mmap",
+            )
             for key in handle.keys():
                 name = name_of(key)
                 if name is None:
@@ -55,7 +59,7 @@ class TextFiles:
         return name in self.where
 
     def get(self, name: str) -> Tensor:
-        """The stored tensor `name` (its stored dtype; a view of the file pages)."""
+        """The stored tensor `name` in its checkpoint dtype."""
         if name not in self.where:
             raise KeyError(f"the text-encoder checkpoint holds no tensor {name!r}")
         handle, key = self.where[name]

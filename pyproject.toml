@@ -18,7 +18,7 @@ dependencies = [
     "pillow>=9.4",
     # ranged reads of KohakuClip image shards behind an http(s) root (kohakumoss_data.images)
     "requests",
-    "safetensors",
+    "safetensors>=0.8.0",
     "tqdm",
     "kohaku-engine",
     "anyschedule",
