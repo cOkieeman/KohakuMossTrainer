@@ -1,0 +1,1 @@
+"""Local KohakuMoss training workbench."""

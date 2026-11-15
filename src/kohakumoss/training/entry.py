@@ -23,6 +23,7 @@ from kohakumoss.logging.log import (
     setup,
     timed,
 )
+from kohakumoss.logging.run_record import RunRecord
 from kohakumoss.memory.device_use import build_device_use
 from kohakumoss.memory.timeline import build_timeline
 from kohakumoss.model import resolve_config
@@ -317,6 +318,19 @@ def worker(
     k: dict, rank: int = 0, world: int = 1, device=None, feed: RankFeed | None = None
 ) -> TrainState:
     """One rank of a run; `feed`: the rank's end of the encode feed (ENCODE_DEVICES)."""
+    output = Path(k["OUTPUT_DIR"]) / run_name(k)
+    with RunRecord(
+        output, _snapshot(k), label=run_name(k), enabled=rank == 0
+    ) as record:
+        state = _worker(k, rank, world, device, feed)
+        if not state.ok:
+            record.update(
+                status="failed", error="Training ended with a nonfinite state"
+            )
+        return state
+
+
+def _worker(k, rank, world, device, feed):
     is_main = rank == 0
     layout = layout_of(k)
     device = device or _device(k, rank)

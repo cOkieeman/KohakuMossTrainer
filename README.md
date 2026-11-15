@@ -84,6 +84,13 @@ Intel Arc, Google Colab, the extras and the Triton / TileLang toolchains:
 [docs/guides/install.md](docs/guides/install.md); Windows details and the feature
 matrix: [docs/guides/install-windows.md](docs/guides/install-windows.md).
 
+## KohakuMoss Studio
+
+This fork includes a desktop browser workbench with Chinese controls, dark and light
+themes, regularization data, native configuration and tools, task queues, live logs,
+checkpoints and automatic discovery of command-line training runs.
+Install and launch it using the [Studio guide](docs/guides/studio.md).
+
 ## Quick start
 
 From the repository root, with the venv active (the same commands in PowerShell, `cmd`
